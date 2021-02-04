@@ -1,0 +1,563 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Milling Calculator</title>
+  <meta name="description" content="a calculator for your cnc settings">
+  <meta name="author" content="Leo, Jens, Jakob et al">
+
+</head>
+<style>
+  .line {
+    margin: 10px;
+  }
+</style>
+
+<body>
+  <script>
+
+    const machines = {
+      modela: 3,
+      xCarve: 4.5,
+      shapeoko: 5,
+      xCarvePro: 10,
+      shopBotStandard: 20,
+      shopBotAlpha: 30,
+      beast: 100
+    }
+
+    const bitChoice = {
+      mdf: {
+        2: {
+          diameter: 2,
+          type: "down-cut",
+        },
+        3: {
+          diameter: 2,
+          type: "down-cut",
+        },
+        4: {
+          diameter: 3,
+          type: "down-cut",
+        },
+        6: {
+          diameter: 3,
+          type: "up-cut",
+        },
+        7: {
+          diameter: 3,
+          type: "up-cut",
+        },
+        8: {
+          diameter: 3,
+          type: "up-cut",
+        },
+        10: {
+          diameter: 3,
+          type: "up-cut",
+        },
+        12: {
+          diameter: 4,
+          type: "up-cut",
+        },
+        15: {
+          diameter: 4,
+          type: "up-cut",
+        },
+        16: {
+          diameter: 6,
+          type: "up-cut",
+        },
+        18: {
+          diameter: 6,
+          type: "up-cut",
+        },
+        20: {
+          diameter: 8,
+          type: "up-cut",
+        },
+        25: {
+          diameter: 8,
+          type: "up-cut",
+        },
+        30: {
+          diameter: 10,
+          type: "up-cut",
+        },
+        40: {
+          diameter: 12,
+          type: "up-cut",
+        },
+      },
+      plywood: {
+        2: {
+          diameter: 2,
+          type: "up-cut",
+        },
+        3: {
+          diameter: 2,
+          type: "up-cut",
+        },
+        4: {
+          diameter: 3,
+          type: "compression",
+        },
+        6: {
+          diameter: 3,
+          type: "compression",
+        },
+        8: {
+          diameter: 3,
+          type: "compression",
+        },
+        10: {
+          diameter: 3,
+          type: "compression",
+        },
+        12: {
+          diameter: 4,
+          type: "compression",
+        },
+        15: {
+          diameter: 4,
+          type: "compression",
+        },
+        16: {
+          diameter: 6,
+          type: "compression",
+        },
+        18: {
+          diameter: 6,
+          type: "compression",
+        },
+        20: {
+          diameter: 8,
+          type: "compression",
+        },
+        25: {
+          diameter: 8,
+          type: "compression",
+        },
+        30: {
+          diameter: 10,
+          type: "compression",
+        },
+        40: {
+          diameter: 12,
+          type: "compression",
+        },
+      },
+      plastic: {
+        2: {
+          diameter: 2,
+          type: "down-cut",
+        },
+        3: {
+          diameter: 2,
+          type: "up-cut",
+        },
+        4: {
+          diameter: 3,
+          type: "up-cut",
+        },
+        6: {
+          diameter: 4,
+          type: "up-cut",
+        },
+        8: {
+          diameter: 4,
+          type: "up-cut",
+        },
+        10: {
+          diameter: 4,
+          type: "up-cut",
+        },
+        12: {
+          diameter: 6,
+          type: "up-cut",
+        },
+        15: {
+          diameter: 6,
+          type: "up-cut",
+        },
+        16: {
+          diameter: 8,
+          type: "up-cut",
+        },
+        18: {
+          diameter: 8,
+          type: "up-cut",
+        },
+        20: {
+          diameter: 10,
+          type: "up-cut",
+        },
+        25: {
+          diameter: 12,
+          type: "up-cut",
+        },
+        30: {
+          diameter: 14,
+          type: "up-cut",
+        },
+        40: {
+          diameter: 16,
+          type: "up-cut",
+        },
+      },
+      aluminum: {
+        2: {
+          diameter: 2,
+          type: "up-cut",
+        },
+        3: {
+          diameter: 2,
+          type: "up-cut",
+        },
+        4: {
+          diameter: 3,
+          type: "up-cut",
+        },
+        6: {
+          diameter: 4,
+          type: "up-cut",
+        },
+        8: {
+          diameter: 6,
+          type: "up-cut",
+        },
+        10: {
+          diameter: 6,
+          type: "up-cut",
+        },
+        12: {
+          diameter: 8,
+          type: "up-cut",
+        },
+        15: {
+          diameter: 10,
+          type: "up-cut",
+        },
+        16: {
+          diameter: 12,
+          type: "up-cut",
+        },
+        18: {
+          diameter: 16,
+          type: "up-cut",
+        },
+        20: {
+          diameter: 16,
+          type: "up-cut",
+        },
+        25: {
+          diameter: 20,
+          type: "up-cut",
+        },
+        30: {
+          diameter: 20,
+          type: "up-cut",
+        },
+        40: {
+          diameter: 25,
+          type: "up-cut",
+        },
+      },
+      steel: {
+        2: {
+          diameter: 3,
+          type: "up-cut",
+        },
+        3: {
+          diameter: 4,
+          type: "up-cut",
+        },
+        4: {
+          diameter: 4,
+          type: "up-cut",
+        },
+        6: {
+          diameter: 6,
+          type: "up-cut",
+        },
+        8: {
+          diameter: 8,
+          type: "up-cut",
+        },
+        10: {
+          diameter: 10,
+          type: "up-cut",
+        },
+        12: {
+          diameter: 12,
+          type: "up-cut",
+        },
+        15: {
+          diameter: 16,
+          type: "up-cut",
+        },
+        16: {
+          diameter: 16,
+          type: "up-cut",
+        },
+        18: {
+          diameter: 20,
+          type: "up-cut",
+        },
+        20: {
+          diameter: 20,
+          type: "up-cut",
+        },
+        25: {
+          diameter: 25,
+          type: "up-cut",
+        },
+        30: {
+          diameter: 30,
+          type: "up-cut",
+        },
+        40: {
+          diameter: 40,
+          type: "up-cut",
+        },
+      },
+    };
+
+    // hardness, lower is harder
+    let presets6mm = {
+      mdf: {
+        chiploads: 0.25,
+        passdepths: 17,
+        rampAngle: 90,
+        hardness: 4.25
+      },
+      wood: {
+        chiploads: 0.2,
+        passdepths: 16,
+        rampAngle: 90,
+        hardness: 3.2,
+      },
+      hardwood: {
+        chiploads: 0.133,
+        passdepths: 12,
+        rampAngle: 45,
+        hardness: 1.6,
+      },
+      foam_or_wax: {
+        chiploads: 0.3,
+        passdepths: 19,
+        rampAngle: 90,
+        hardness: 5.7
+      },
+      plastic_roughing: {
+        chiploads: 0.15,
+        passdepths: 8, // pass depth lower because you need to evacuate chips
+        rampAngle: 18,
+        hardness: 1.2,
+      },
+      plastic_finishing: {
+        chiploads: 0.073,
+        passdepths: 8,
+        rampAngle: 18,
+        hardness: 0.6,
+      },
+      aluminum_roughing: {
+        chiploads: 0.12,
+        passdepths: 1.8,
+        rampAngle: 12,
+        hardness: 0.22
+      },
+      aluminum_finishing: {
+        chiploads: 0.06,
+        passdepths: 1.8,
+        rampAngle: 12,
+        hardness: 0.11,
+      },
+      steel_roughing: {
+        chiploads: 0.08,
+        passdepths: 0.6,
+        rampAngle: 5,
+        hardness: 0.05,
+      },
+      steel_finishing: {
+        chiploads: 0.04,
+        passdepths: 0.6,
+        rampAngle: 5,
+        hardness: 0.025,
+      },
+    }
+
+    const output = (input, rpm, presets6mm, presetDiameter, plungRateReductionFactor) => {
+      let { materialToCut, millingBitDiameter, numberOfFlutes } = input;
+
+      let feedrate = (presets6mm[materialToCut].chiploads * rpm * numberOfFlutes * millingBitDiameter)/presetDiameter;
+      let plungerate = feedrate * plungRateReductionFactor;
+
+      let fluteReduction = 1-numberOfFlutes*.15;
+
+      // set pass depth to diameter special case wood higher
+      let passDepth = Math.max(presets6mm[materialToCut].passdepths, 6)/presetDiameter*millingBitDiameter*fluteReduction;
+      let rampAngle = presets6mm[materialToCut].rampAngle;
+
+      return {
+        feedrate,
+        plungerate,
+        passDepth,
+        rampAngle,
+      };
+    }
+
+    const calculateSettings = (material, bitDiameter, numberOfFlutes, rpm, plungRateReductionFactor = 0.6) => {
+      let input = {
+        materialToCut: material,
+        millingBitDiameter: bitDiameter,
+        numberOfFlutes: numberOfFlutes,
+      };
+
+      return output(input, rpm, presets6mm, 6, plungRateReductionFactor);
+    }
+
+    function close(bitChoice, materialThickness) {
+      let counts = Object.keys(bitChoice).map(e => parseFloat(e));
+      let goal = materialThickness;
+
+      let found = false;
+      counts.forEach((count, index) => {
+        if (count >= goal && !found) {
+          found = true;
+          materialThickness = count;
+        }
+
+        if (goal > counts[counts.length-1]) {
+          materialThickness = count;
+        }
+      })
+
+      return materialThickness;
+    }
+
+    let submit1 = () => {
+      let material = document.getElementById("material").value;
+      let materialThickness = parseFloat(document.getElementById("materialThickness").value);
+
+      //aluminum, plastic, plywood, mdf
+      if (!isNaN(materialThickness)) {
+        let diameter;
+
+        if (material === "wood") {
+          materialThickness = close(bitChoice["plywood"], materialThickness);
+          diameter = bitChoice["plywood"][materialThickness].diameter
+        };
+        if (material === "hardwood") {
+          materialThickness = close(bitChoice["plywood"], materialThickness)
+          diameter = bitChoice["plywood"][materialThickness].diameter
+        };
+        if (material === "plastic_roughing" || material === "plastic_finishing") {
+          materialThickness = close(bitChoice["plastic"], materialThickness);
+          diameter = bitChoice["plastic"][materialThickness].diameter
+        };
+        if (material === "aluminum_roughing" || material === "aluminum_finishing") {
+          materialThickness = close(bitChoice["aluminum"], materialThickness)
+          diameter = bitChoice["aluminum"][materialThickness].diameter
+        };
+        if (material === "steel_roughing" || material === "steel_finishing") {
+          materialThickness = close(bitChoice["steel"], materialThickness)
+          diameter = bitChoice["aluminum"][materialThickness].diameter
+        };
+        if (material === "foam_or_wax" || material === "mdf") {
+          materialThickness = close(bitChoice["mdf"], materialThickness)
+          diameter = bitChoice["mdf"][materialThickness].diameter
+        };
+
+        document.getElementById("bitDiameter").value = diameter;
+        document.getElementById("flutes").value = 1;
+        document.getElementById("rpm").value = 18000;
+
+        document.getElementById("bitDiameter").disabled = false;
+        document.getElementById("flutes").disabled = false;
+        document.getElementById("rpm").disabled = false;
+        document.getElementById("submit2").disabled = false;
+
+        document.getElementById("submit1").innerHTML = "Suggest Bit";
+
+        submit2();
+      }
+    }
+
+    let submit2 = () => {
+      let material = document.getElementById("material").value;
+      let bitDiameter = parseFloat(document.getElementById("bitDiameter").value);
+      let flutes = parseFloat(document.getElementById("flutes").value);
+      let rpm = parseFloat(document.getElementById("rpm").value);
+
+      let set = calculateSettings(material, bitDiameter, flutes, rpm);
+
+      const materialRemovalRate = set.feedrate*set.passDepth*bitDiameter;
+      let stiffness = parseFloat(document.getElementById("stiffness").value);
+      let hardness = presets6mm[material].hardness;
+
+      console.log("---NEW RUN---")
+      console.log("material", material);
+      console.log("stiffness", stiffness);
+      console.log("material hardness", hardness);
+      console.log("materialRemovalRate", materialRemovalRate);
+      console.log("machine demand", materialRemovalRate/hardness);
+      // this assumes that the machine is a shopbot
+
+      document.getElementById("output").innerHTML = `
+        <b>Settings:</b> <br>
+        Feedrate: ${set.feedrate} mm/min <br>
+        Plungerate: ${set.plungerate} mm/min <br>
+        Pass Depth: ${set.passDepth} mm <br>
+        Ramp Angle: ${set.rampAngle} degrees
+      `
+    }
+
+  </script>
+
+  <text>
+    <i>
+    Jens' settings <br>
+    Leo's code <br>
+    and also Jakob <br>
+    present: </i> <b>BarkBrain</b> <br>
+    <i>automill settings calculator</i>
+  </text>
+  <br>
+  <br>
+
+  <form id="inputs">
+    <div class="line">
+      Stiffness: <input type="range" min="1" max="100" value="50" class="slider" id="stiffness">
+    </div>
+    <div class = "line">
+      Material:
+      <select id="material">
+        <option value="wood">wood</option>
+        <option value="mdf">mdf</option>
+        <option value="foam_or_wax">foam_or_wax</option>
+        <option value="hardwood">hardwood</option>
+        <option value="plastic_roughing">plastic_roughing</option>
+        <option value="plastic_finishing">plastic_finishing</option>
+        <option value="aluminum_roughing">aluminum_roughing</option>
+        <option value="aluminum_finishing">aluminum_finishing</option>
+        <option value="steel_roughing">steel_roughing</option>
+        <option value="steel_finishing">steel_finishing</option>
+      </select>
+    </div>
+    <div class = "line"> Thickness: <input type="number" id="materialThickness"> mm</div>
+  </form>
+  <button type="submit" id="submit1" onClick="submit1()">Submit to Enable Calculator</button>
+  <br/><br/>
+  <form id="inputs2">
+     <div class="line"> Bit Diameter: <input type="number" id="bitDiameter" disabled> mm</div>
+     <div class="line"> Flutes: <input type="number" id="flutes" disabled></div>
+     <div class="line"> RPM: <input type="number" id="rpm" disabled></div>
+  </form>
+  <button type="submit" id="submit2" onClick="submit2()" disabled>Re-calculate</button> <br>
+  <br>
+  <div id="output"></div>
+</body>
+</html>
