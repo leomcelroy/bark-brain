@@ -22,7 +22,42 @@
   body {
     display: grid;
     place-content: center;
-    height: 70vh;
+  }
+
+  .container {
+    margin-top: 50px;
+    display: grid;
+    place-content: center;
+    border: solid 2px black;
+    border-radius: 3px;
+    padding: 20px;
+    background: #b9d0d13d;
+  }
+
+  #slider-value {
+    position: absolute;
+  }
+
+  .slider-scale {
+    position: relative;
+    color: grey;
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+  }
+
+  .slider-scale .scale {
+    visibility: hidden;
+    position: absolute;
+    top: 100%;
+    right: -50%;
+    width: 145px;
+    text-align: center;
+    color: black;
+    background: lightgrey;
+  }
+
+  .slider-scale:hover .scale {
+    visibility: visible;
   }
 
 /*  .left {
@@ -39,17 +74,17 @@
 <body>
   <script>
 
-    const machines = {
-      modela: 3,
-      xCarve: 4.5,
-      shapeoko: 5,
-      xCarvePro: 10,
-      shopBotStandard: 20,
-      shopBotAlpha: 30,
-      beast: 100
-    }
+    // const machines = {
+    //   modela: 3,
+    //   xCarve: 4.5,
+    //   shapeoko: 5,
+    //   xCarvePro: 10,
+    //   shopBotStandard: 20,
+    //   shopBotAlpha: 30,
+    //   beast: 100
+    // }
 
-    const bitChoice = {
+    const BIT_CHOICE = {
       mdf: {
         2: {
           diameter: 2,
@@ -347,12 +382,12 @@
     };
 
     // hardness, lower is harder
-    let presets6mm = {
+    let PRESETS_6MM = {
       mdf: {
         chiploads: 0.25,
         passdepths: 17,
         rampAngle: 90,
-        hardness: 4.25
+        hardness: 4.25 // right now hardness is just chipload*passdepths but this may not always be right because chipload also adjust for surface finish
       },
       wood: {
         chiploads: 0.2,
@@ -410,8 +445,13 @@
       },
     }
 
-    const output = (input, rpm, presets6mm, presetDiameter, plungRateReductionFactor) => {
-      let { materialToCut, millingBitDiameter, numberOfFlutes } = input;
+    function calculateSettings(
+      input, 
+      plungRateReductionFactor = 0.6, 
+      presets6mm = PRESETS_6MM, 
+      presetDiameter = 6
+    ) {
+      let { materialToCut, millingBitDiameter, numberOfFlutes, rpm } = input;
 
       let feedrate = (presets6mm[materialToCut].chiploads * rpm * numberOfFlutes * millingBitDiameter)/presetDiameter;
       let plungerate = feedrate * plungRateReductionFactor;
@@ -419,7 +459,9 @@
       let fluteReduction = 1-numberOfFlutes*.15;
 
       // set pass depth to diameter special case wood higher
-      let passDepth = Math.max(presets6mm[materialToCut].passdepths, 6)/presetDiameter*millingBitDiameter*fluteReduction;
+      const preset = Math.max(presets6mm[materialToCut].passdepths, 6); // this is a hack to assume stiffer machine
+
+      let passDepth = (preset/presetDiameter*millingBitDiameter) *fluteReduction;
       let rampAngle = presets6mm[materialToCut].rampAngle;
 
       return {
@@ -428,16 +470,6 @@
         passDepth,
         rampAngle,
       };
-    }
-
-    const calculateSettings = (material, bitDiameter, numberOfFlutes, rpm, plungRateReductionFactor = 0.6) => {
-      let input = {
-        materialToCut: material,
-        millingBitDiameter: bitDiameter,
-        numberOfFlutes: numberOfFlutes,
-      };
-
-      return output(input, rpm, presets6mm, 6, plungRateReductionFactor);
     }
 
     function close(bitChoice, materialThickness) {
@@ -459,38 +491,34 @@
       return materialThickness;
     }
 
+    function chooseBit(material, materialThickness) {
+
+        if (material === "wood") material = "plywood"
+        else if (material === "hardwood") material = "plywood"
+        else if (material === "plastic_roughing" || material === "plastic_finishing") material = "plastic"
+        else if (material === "aluminum_roughing" || material === "aluminum_finishing") material = "aluminum"
+        else if (material === "steel_roughing" || material === "steel_finishing") material = "steel"
+        else if (material === "foam_or_wax" || material === "mdf") material = "mdf";
+
+        materialThickness = close(BIT_CHOICE[material], materialThickness);
+        return BIT_CHOICE[material][materialThickness]
+    }
+
+    function getBitChoice() {
+      let material = document.getElementById("material").value;
+      let materialThickness = parseFloat(document.getElementById("materialThickness").value);
+
+      return !isNaN(materialThickness) ? chooseBit(material, materialThickness) : undefined;
+    }
+
     let submit1 = () => {
       let material = document.getElementById("material").value;
       let materialThickness = parseFloat(document.getElementById("materialThickness").value);
 
       //aluminum, plastic, plywood, mdf
       if (!isNaN(materialThickness)) {
-        let diameter;
 
-        if (material === "wood") {
-          materialThickness = close(bitChoice["plywood"], materialThickness);
-          diameter = bitChoice["plywood"][materialThickness].diameter
-        };
-        if (material === "hardwood") {
-          materialThickness = close(bitChoice["plywood"], materialThickness)
-          diameter = bitChoice["plywood"][materialThickness].diameter
-        };
-        if (material === "plastic_roughing" || material === "plastic_finishing") {
-          materialThickness = close(bitChoice["plastic"], materialThickness);
-          diameter = bitChoice["plastic"][materialThickness].diameter
-        };
-        if (material === "aluminum_roughing" || material === "aluminum_finishing") {
-          materialThickness = close(bitChoice["aluminum"], materialThickness)
-          diameter = bitChoice["aluminum"][materialThickness].diameter
-        };
-        if (material === "steel_roughing" || material === "steel_finishing") {
-          materialThickness = close(bitChoice["steel"], materialThickness)
-          diameter = bitChoice["aluminum"][materialThickness].diameter
-        };
-        if (material === "foam_or_wax" || material === "mdf") {
-          materialThickness = close(bitChoice["mdf"], materialThickness)
-          diameter = bitChoice["mdf"][materialThickness].diameter
-        };
+        const diameter = chooseBit(material, materialThickness).diameter;
 
         document.getElementById("bitDiameter").value = diameter;
         document.getElementById("flutes").value = 1;
@@ -513,11 +541,18 @@
       let flutes = parseFloat(document.getElementById("flutes").value);
       let rpm = parseFloat(document.getElementById("rpm").value);
 
-      let set = calculateSettings(material, bitDiameter, flutes, rpm);
+      let input = {
+        materialToCut: material,
+        millingBitDiameter: bitDiameter,
+        numberOfFlutes: flutes,
+        rpm
+      };
+
+      let set = calculateSettings(input);
 
       const materialRemovalRate = set.feedrate*set.passDepth*bitDiameter;
       let stiffness = parseFloat(document.getElementById("stiffness").value);
-      let hardness = presets6mm[material].hardness;
+      let hardness = PRESETS_6MM[material].hardness;
 
       console.log("---NEW RUN---")
       console.log("material", material);
@@ -532,65 +567,96 @@
         Feedrate: ${set.feedrate} mm/min <br>
         Plungerate: ${set.plungerate} mm/min <br>
         Pass Depth: ${set.passDepth} mm <br>
-        Ramp Angle: ${set.rampAngle} degrees
+        Ramp Angle: ${set.rampAngle} degrees <br>
+        Type: ${getBitChoice().type}
       `
     }
 
-  </script>
-  <text>
-    <i>
-    Jens' settings <br>
-    Leo's code <br>
-    and also Jakob <br>
-    present: </i> <b>BarkBrain</b> <br>
-    <i>automill settings calculator</i>
-  </text>
-  <br>
-  <br>
+    function stiffnessChanged(e) {
+      const slider = document.getElementById("stiffness");
+      const label = document.getElementById("slider-value");
+      label.innerHTML = slider.value;
+    }
 
-  <form id="inputs">
-    <div class="line">
-      <span class="left">Stiffness:</span> 
-      <input type="range" class="right" min="1" max="100" value="30" id="stiffness">
-    </div>
-    <div class = "line">
-      <span class="left">Material:</span>
-      <select id="material" class="right">
-        <option value="wood">wood</option>
-        <option value="mdf">mdf</option>
-        <option value="foam_or_wax">foam_or_wax</option>
-        <option value="hardwood">hardwood</option>
-        <option value="plastic_roughing">plastic_roughing</option>
-        <option value="plastic_finishing">plastic_finishing</option>
-        <option value="aluminum_roughing">aluminum_roughing</option>
-        <option value="aluminum_finishing">aluminum_finishing</option>
-        <option value="steel_roughing">steel_roughing</option>
-        <option value="steel_finishing">steel_finishing</option>
-      </select>
-    </div>
-    <div class = "line"> 
-      <span class="left">Thickness (mm):</span> 
-      <input class="right" type="number" id="materialThickness">
-    </div>
-  </form>
-  <button type="submit" id="submit1" onClick="submit1()">Submit to Enable Calculator</button>
-  <br/><br/>
-  <form id="inputs2">
-    <div class="line"> 
-      <span class="left">Bit Diameter (mm):</span>  
-      <input class="right" type="number" id="bitDiameter" disabled> 
-    </div>
-    <div class="line"> 
-      <span class="left">Flutes:</span>  
-      <input class="right" type="number" id="flutes" disabled>
-    </div>
-    <div class="line"> 
-      <span class="left">RPM:</span> 
-      <input class="right" type="number" id="rpm" disabled>
-    </div>
-  </form>
-  <button type="submit" id="submit2" onClick="submit2()" disabled>Re-calculate</button> <br>
-  <br/>
-  <div id="output"></div>
+  </script>
+  <div class="container">
+    <text>
+      <i>
+      Jens' settings <br>
+      Leo's code <br>
+      and also Jakob <br>
+      present: </i> <b>BarkBrain</b> <br>
+      <i>automill settings calculator</i>
+    </text>
+    <br>
+    <br>
+
+    <form id="inputs">
+      <div class="line">
+        <span class="left">
+          Stiffness: 
+          (<span class="slider-scale">scale<div class="scale">
+              <div>modela: 3</div>
+              <div>xCarve: 4.5</div>
+              <div>shapeoko: 5</div>
+              <div>xCarvePro: 10</div>
+              <div>shopBotStandard: 20</div>
+              <div>shopBotAlpha: 30</div>
+              <div>beast: 100</div>
+          </div></span>)
+        </span> 
+        <span class="right">
+          <input type="range" min="1" max="100" value="100" id="stiffness" onInput="stiffnessChanged()">
+          <span id="slider-value">100</span>
+      <!--     <select id="machine">
+            <option value="modela">modela</option>
+            <option value="xCarve">x_carve</option>
+            <option value="shapeoko">shapeoko</option>
+            <option value="shopBotStandard">shopBotStandard</option>
+            <option value="shopBotAlpha">shopBotAlpha</option>
+            <option value="beast" selected>beast</option>
+          </select> -->
+        </span>
+      </div>
+      <div class = "line">
+        <span class="left">Material:</span>
+        <select id="material" class="right">
+          <option value="wood">wood</option>
+          <option value="mdf">mdf</option>
+          <option value="foam_or_wax">foam_or_wax</option>
+          <option value="hardwood">hardwood</option>
+          <option value="plastic_roughing">plastic_roughing</option>
+          <option value="plastic_finishing">plastic_finishing</option>
+          <option value="aluminum_roughing">aluminum_roughing</option>
+          <option value="aluminum_finishing">aluminum_finishing</option>
+          <option value="steel_roughing">steel_roughing</option>
+          <option value="steel_finishing">steel_finishing</option>
+        </select>
+      </div>
+      <div class = "line"> 
+        <span class="left">Thickness (mm):</span> 
+        <input class="right" type="number" id="materialThickness">
+      </div>
+    </form>
+    <button type="submit" id="submit1" onClick="submit1()">Submit to Enable Calculator</button>
+    <br/><br/>
+    <form id="inputs2">
+      <div class="line"> 
+        <span class="left">Bit Diameter (mm):</span>  
+        <input class="right" type="number" id="bitDiameter" disabled> 
+      </div>
+      <div class="line"> 
+        <span class="left">Flutes:</span>  
+        <input class="right" type="number" id="flutes" disabled>
+      </div>
+      <div class="line"> 
+        <span class="left">RPM:</span> 
+        <input class="right" type="number" id="rpm" disabled>
+      </div>
+    </form>
+    <button type="submit" id="submit2" onClick="submit2()" disabled>Re-calculate</button> <br>
+    <br/>
+    <div id="output"></div>
+  </div>
 </body>
 </html>
