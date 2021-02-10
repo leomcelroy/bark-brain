@@ -3,8 +3,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-
-  <title>Milling Calculator</title>
+  <meta content="width=device-width, initial-scale=1" name="viewport" />
+  <title>BarkBrain</title>
   <meta name="description" content="a calculator for your cnc settings">
   <meta name="author" content="Leo, Jens, Jakob et al">
 
@@ -25,7 +25,7 @@
   }
 
   .container {
-    margin-top: 50px;
+    margin-top: 10%;
     display: grid;
     place-content: center;
     border: solid 2px black;
@@ -382,66 +382,73 @@
     };
 
     // hardness, lower is harder
+    // change hardness to tough to mill factor or something
+    // surface speed
+
+    // single flute bits don't work well in steel because bits are pointy
+    // multi flute bits are flatter
+    const SHOPBOT_STIFFNESS = 1500;
     let PRESETS_6MM = {
       mdf: {
         chiploads: 0.25,
         passdepths: 17,
         rampAngle: 90,
-        hardness: 4.25 // right now hardness is just chipload*passdepths but this may not always be right because chipload also adjust for surface finish
+        hardness: SHOPBOT_STIFFNESS/3000000 // right now hardness is just chipload*passdepths but this may not always be right because chipload also adjust for surface finish
       },
       wood: {
         chiploads: 0.2,
         passdepths: 16,
         rampAngle: 90,
-        hardness: 3.2,
+        hardness: SHOPBOT_STIFFNESS/1360000
       },
       hardwood: {
         chiploads: 0.133,
         passdepths: 12,
         rampAngle: 45,
-        hardness: 1.6,
+        hardness: SHOPBOT_STIFFNESS/347289
       },
       foam_or_wax: {
         chiploads: 0.3,
         passdepths: 19,
         rampAngle: 90,
-        hardness: 5.7
+        hardness: SHOPBOT_STIFFNESS/19379999
       },
       plastic_roughing: {
         chiploads: 0.15,
         passdepths: 8, // pass depth lower because you need to evacuate chips
         rampAngle: 18,
-        hardness: 1.2,
+        hardness: SHOPBOT_STIFFNESS/371790
       },
       plastic_finishing: {
         chiploads: 0.073,
         passdepths: 8,
         rampAngle: 18,
-        hardness: 0.6,
+        hardness: SHOPBOT_STIFFNESS/371790
       },
       aluminum_roughing: {
         chiploads: 0.12,
         passdepths: 1.8,
         rampAngle: 12,
-        hardness: 0.22
+        hardness: SHOPBOT_STIFFNESS/20000
       },
       aluminum_finishing: {
         chiploads: 0.06,
         passdepths: 1.8,
         rampAngle: 12,
-        hardness: 0.11,
+        hardness: SHOPBOT_STIFFNESS/20000
+
       },
       steel_roughing: {
         chiploads: 0.08,
         passdepths: 0.6,
         rampAngle: 5,
-        hardness: 0.05,
+        hardness: SHOPBOT_STIFFNESS/2000
       },
       steel_finishing: {
         chiploads: 0.04,
         passdepths: 0.6,
         rampAngle: 5,
-        hardness: 0.025,
+        hardness: SHOPBOT_STIFFNESS/2000
       },
     }
 
@@ -456,12 +463,12 @@
       let feedrate = (presets6mm[materialToCut].chiploads * rpm * numberOfFlutes * millingBitDiameter)/presetDiameter;
       let plungerate = feedrate * plungRateReductionFactor;
 
-      let fluteReduction = 1-numberOfFlutes*.15;
+      let fluteReduction = 1-(numberOfFlutes-1)*.15;
 
       // set pass depth to diameter special case wood higher
       const preset = Math.max(presets6mm[materialToCut].passdepths, 6); // this is a hack to assume stiffer machine
 
-      let passDepth = (preset/presetDiameter*millingBitDiameter) *fluteReduction;
+      let passDepth = (preset/presetDiameter*millingBitDiameter)*fluteReduction;
       let rampAngle = presets6mm[materialToCut].rampAngle;
 
       return {
@@ -556,17 +563,31 @@
 
       console.log("---NEW RUN---")
       console.log("material", material);
-      console.log("stiffness", stiffness);
-      console.log("material hardness", hardness);
+      // console.log("stiffness", stiffness);
+      // console.log("material hardness", hardness);
       console.log("materialRemovalRate", materialRemovalRate);
-      console.log("machine demand", materialRemovalRate/hardness);
+      // mrr = fr*pd*dia
+      // maxmrr
+      // calculate max material removal rate from stiffness and hardness
+      // 30/3000000
+      // get new passDepth
+      const mrr = stiffness/hardness;
+      console.log("maxMaterialRemovalRate", mrr);
+
+      const fluteReduction = 1-(flutes-1)*.15;
+      // console.log("fluteReduction", fluteReduction)
+      const rpmFactor = 18000/rpm; // now rpm doesn't effect max pass depth
+      const maxPassDepth = mrr/set.feedrate/bitDiameter*flutes*fluteReduction/rpmFactor;
+      console.log("maxPassDepth", maxPassDepth);
+
+      // console.log("machine demand", materialRemovalRate/hardness);
       // this assumes that the machine is a shopbot
 
       document.getElementById("output").innerHTML = `
         <b>Settings:</b> <br>
         Feedrate: ${set.feedrate} mm/min <br>
         Plungerate: ${set.plungerate} mm/min <br>
-        Pass Depth: ${set.passDepth} mm <br>
+        Pass Depth: ${Math.round(set.passDepth*100)/100} mm <br>
         Ramp Angle: ${set.rampAngle} degrees <br>
         Type: ${getBitChoice().type}
       `
@@ -596,18 +617,19 @@
         <span class="left">
           Stiffness: 
           (<span class="slider-scale">scale<div class="scale">
-              <div>modela: 3</div>
-              <div>xCarve: 4.5</div>
-              <div>shapeoko: 5</div>
-              <div>xCarvePro: 10</div>
-              <div>shopBotStandard: 20</div>
-              <div>shopBotAlpha: 30</div>
-              <div>beast: 100</div>
+              <div>modela: ?</div>
+              <div>xCarve: ?</div>
+              <div>shapeoko: 100</div>
+              <div>xCarvePro: ?</div>
+              <div>shopBotStandard: 1000</div>
+              <div>shopBotAlpha: 1500</div>
+              <div>beast: 5000</div>
           </div></span>)
         </span> 
         <span class="right">
-          <input type="range" min="1" max="100" value="100" id="stiffness" onInput="stiffnessChanged()">
-          <span id="slider-value">100</span>
+          <input type="range" min="1" max="5000" value="5000" id="stiffness" onInput="stiffnessChanged()">
+          <!-- make this scale non-linear more resoultion at bottom, type in-->
+          <span id="slider-value">5000</span>
       <!--     <select id="machine">
             <option value="modela">modela</option>
             <option value="xCarve">x_carve</option>

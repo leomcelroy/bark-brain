@@ -1,1 +1,11 @@
+- Warnings for unacceptable cutting
+- bit breaking factor
+- surface speed, max and min
+- verify values
+- use physics!
+- better scale for stiffness
+- type in for stiffness
+
+- collecting floors and ceilings
+
 -Add unit conversion
