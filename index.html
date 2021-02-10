@@ -385,6 +385,10 @@
     // change hardness to tough to mill factor or something
     // surface speed
 
+    // loosness of machine
+    // slop
+    // spindle runout
+
     // single flute bits don't work well in steel because bits are pointy
     // multi flute bits are flatter
     const SHOPBOT_STIFFNESS = 1500;
@@ -456,9 +460,9 @@
       input, 
       plungRateReductionFactor = 0.6, 
       presets6mm = PRESETS_6MM, 
-      presetDiameter = 6
+      presetDiameter = 6,
     ) {
-      let { materialToCut, millingBitDiameter, numberOfFlutes, rpm } = input;
+      let { materialToCut, millingBitDiameter, numberOfFlutes, rpm, stiffness } = input;
 
       let feedrate = (presets6mm[materialToCut].chiploads * rpm * numberOfFlutes * millingBitDiameter)/presetDiameter;
       let plungerate = feedrate * plungRateReductionFactor;
@@ -466,8 +470,14 @@
       let fluteReduction = 1-(numberOfFlutes-1)*.15;
 
       // set pass depth to diameter special case wood higher
-      const preset = Math.max(presets6mm[materialToCut].passdepths, 6); // this is a hack to assume stiffer machine
+      const preset = presets6mm[materialToCut].passdepths;
+      // let preset = Math.max(presets6mm[materialToCut].passdepths, 6); // this is a hack to assume stiffer machine
+      // if (materialToCut.includes("aluminum")) preset /= 3000/stiffness
+      // if (materialToCut.includes("steel")) preset /= 6000/stiffness
 
+      // it costs 100 dollars to do industrial espionage - jens
+
+      // up chipload and reduce passdepth, for dry machining on shitty machines
       let passDepth = (preset/presetDiameter*millingBitDiameter)*fluteReduction;
       let rampAngle = presets6mm[materialToCut].rampAngle;
 
@@ -547,18 +557,20 @@
       let bitDiameter = parseFloat(document.getElementById("bitDiameter").value);
       let flutes = parseFloat(document.getElementById("flutes").value);
       let rpm = parseFloat(document.getElementById("rpm").value);
+      let stiffness = parseFloat(document.getElementById("stiffness").value);
+
 
       let input = {
         materialToCut: material,
         millingBitDiameter: bitDiameter,
         numberOfFlutes: flutes,
-        rpm
+        rpm,
+        stiffness
       };
 
       let set = calculateSettings(input);
 
       const materialRemovalRate = set.feedrate*set.passDepth*bitDiameter;
-      let stiffness = parseFloat(document.getElementById("stiffness").value);
       let hardness = PRESETS_6MM[material].hardness;
 
       console.log("---NEW RUN---")
@@ -578,16 +590,19 @@
       // console.log("fluteReduction", fluteReduction)
       const rpmFactor = 18000/rpm; // now rpm doesn't effect max pass depth
       const maxPassDepth = mrr/set.feedrate/bitDiameter*flutes*fluteReduction/rpmFactor;
+      console.log("ogPassDepth", set.passDepth);
       console.log("maxPassDepth", maxPassDepth);
+
+      const pd = set.passDepth > maxPassDepth ? maxPassDepth : set.passDepth;
 
       // console.log("machine demand", materialRemovalRate/hardness);
       // this assumes that the machine is a shopbot
-
+      const r = x => Math.round(x*100)/100
       document.getElementById("output").innerHTML = `
         <b>Settings:</b> <br>
-        Feedrate: ${set.feedrate} mm/min <br>
-        Plungerate: ${set.plungerate} mm/min <br>
-        Pass Depth: ${Math.round(set.passDepth*100)/100} mm <br>
+        Feedrate: ${r(set.feedrate)} mm/min <br>
+        Plungerate: ${r(set.plungerate)} mm/min <br>
+        Pass Depth: ${r(pd)} mm <br>
         Ramp Angle: ${set.rampAngle} degrees <br>
         Type: ${getBitChoice().type}
       `
@@ -620,16 +635,18 @@
               <div>modela: ?</div>
               <div>xCarve: ?</div>
               <div>shapeoko: 100</div>
+              <div>nextWaveCNC: ?</div>
               <div>xCarvePro: ?</div>
+              <div>avidCNC: ?</div>
               <div>shopBotStandard: 1000</div>
               <div>shopBotAlpha: 1500</div>
-              <div>beast: 5000</div>
+              <!-- <div>beast: 5000</div> -->
           </div></span>)
         </span> 
         <span class="right">
-          <input type="range" min="1" max="5000" value="5000" id="stiffness" onInput="stiffnessChanged()">
+          <input type="range" min="1" max="1500" value="1500" id="stiffness" onInput="stiffnessChanged()">
           <!-- make this scale non-linear more resoultion at bottom, type in-->
-          <span id="slider-value">5000</span>
+          <span id="slider-value">1500</span>
       <!--     <select id="machine">
             <option value="modela">modela</option>
             <option value="xCarve">x_carve</option>
