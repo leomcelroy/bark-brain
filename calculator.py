@@ -457,14 +457,14 @@ def adjust(input):
     "type": chooseBit(material, bitDiameter)["type"]
   }
 
-testChooseBit = chooseBit("mdf", 5)
+testChooseBit = chooseBit("hardwood", 4)
 
 testSettings = adjust({
-  "materialToCut": "wood",
-  "millingBitDiameter": 4,
-  "numberOfFlutes": 2,
+  "materialToCut": "hardwood",
+  "millingBitDiameter": 3,
+  "numberOfFlutes": 1,
   "rpm": 18000,
-  "stiffness": 3000
+  "stiffness": 547
 })
 
 print(testChooseBit)
